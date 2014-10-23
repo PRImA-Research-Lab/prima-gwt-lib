@@ -1,0 +1,17 @@
+org.primaresearch.web.gwt.client
+org.primaresearch.web.gwt.client.image
+org.primaresearch.web.gwt.client.log
+org.primaresearch.web.gwt.client.page
+org.primaresearch.web.gwt.client.ui
+org.primaresearch.web.gwt.client.ui.keyboard
+org.primaresearch.web.gwt.client.ui.page
+org.primaresearch.web.gwt.client.ui.page.renderer
+org.primaresearch.web.gwt.client.ui.page.tool
+org.primaresearch.web.gwt.client.ui.page.tool.controls
+org.primaresearch.web.gwt.client.ui.page.tool.drawing
+org.primaresearch.web.gwt.client.user
+org.primaresearch.web.gwt.client.variable
+org.primaresearch.web.gwt.server
+org.primaresearch.web.gwt.shared
+org.primaresearch.web.gwt.shared.page
+org.primaresearch.web.gwt.shared.user
