@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,12 +88,12 @@ public class PageContentRendererPlugin implements RendererPlugin {
 			RenderStyle style = greyedOut 	? new RenderStyle("rgb(100,100,100)", "transparent", 1.0) 
 											: getContentStyle(obj.getType().getName());
 			
-			PolygonRendererHelper.drawPolygon(context, obj.getCoords(), style, renderer.getZoomFactor(), drawOutline, fill);
+			RendererHelper.drawPolygon(context, obj.getCoords(), style, renderer.getZoomFactor(), drawOutline, fill);
 			
 			//Highlight?
 			if (highlightEnabled) {
 				if (obj.getId().equals(renderer.getContentObjectToHighlightFaintly())) //Just render twice
-					PolygonRendererHelper.drawPolygon(context, obj.getCoords(), style, renderer.getZoomFactor(), false, true);
+					RendererHelper.drawPolygon(context, obj.getCoords(), style, renderer.getZoomFactor(), false, true);
 			}
 		}
 	}

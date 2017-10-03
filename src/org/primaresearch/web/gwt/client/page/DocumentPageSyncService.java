@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,14 @@ import java.util.ArrayList;
 
 import org.primaresearch.dla.page.layout.physical.shared.ContentType;
 import org.primaresearch.dla.page.layout.physical.shared.RegionType;
+import org.primaresearch.maths.geometry.Dimension;
 import org.primaresearch.maths.geometry.Polygon;
 import org.primaresearch.shared.Pair;
+import org.primaresearch.shared.variable.Variable;
 import org.primaresearch.web.gwt.shared.RemoteException;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
 import org.primaresearch.web.gwt.shared.page.ContentObjectSync;
+import org.primaresearch.web.gwt.shared.page.GroupC;
 
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
@@ -45,6 +48,14 @@ public interface DocumentPageSyncService extends RemoteService {
 	 * @throws RemoteException
 	 */
 	public ArrayList<ContentObjectC> loadContentObjects(String url, String contentType) throws RemoteException;
+	
+	/**
+	 * Requests the page reading order from the server.
+	 * @param url Source of PAGE XML file (optional)
+	 * @return Root group of reading order.
+	 * @throws RemoteException
+	 */
+	public GroupC loadReadingOrder(String url) throws RemoteException;
 
 	/**
 	 * Sends updated text content for a page object to the server.
@@ -56,6 +67,17 @@ public interface DocumentPageSyncService extends RemoteService {
 	 * @throws RemoteException
 	 */
 	public Boolean putTextContent(String url, ContentType type, String contentObjectId, String text) throws RemoteException;
+	
+	/**
+	 * Sends a new attribute value for a page content object to the server.
+	 * @param url Source of PAGE XML file (optional)
+	 * @param type Type of page object  (supported: 'Region', 'TextLine', 'Word', 'Glyph')
+	 * @param contentObjectId ID of page object
+	 * @param attr Attribute with new value
+	 * @return True if successful
+	 * @throws RemoteException
+	 */
+	public Boolean setAttributeValue(String url, ContentType type, String contentObjectId, Variable attr) throws RemoteException;
 	
 	/**
 	 * Sends updated region type and sub-type for one region to the server.
@@ -147,5 +169,13 @@ public interface DocumentPageSyncService extends RemoteService {
 	 * using a sub-folder of the given name.
 	 */
 	public Boolean savetMultiplePagesLocally(String metsFileUrl, String folderName) throws RemoteException;
+	
+	/**
+	 * Gets the document page size (width and height) from the server.
+	 * @param url Source of PAGE XML file (optional)
+	 * @return Width and height as specified in PAGE file
+	 * @throws RemoteException
+	 */
+	public Dimension getPageSize(String url) throws RemoteException;
 
 }

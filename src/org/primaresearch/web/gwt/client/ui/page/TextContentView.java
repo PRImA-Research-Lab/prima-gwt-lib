@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ public class TextContentView implements SelectionListener, VirtualKeyPressListen
 	private String textColor;
 	
 	private Set<TextContentViewChangeListener> listeners = new HashSet<TextContentViewChangeListener>();
+	
+	private boolean readOnly;
 
 	/**
 	 * Constructor for read-only text content view.
@@ -61,9 +63,17 @@ public class TextContentView implements SelectionListener, VirtualKeyPressListen
 	 */
 	public TextContentView(boolean readOnly) {
 		textField.addStyleName("TextContentView");
-		textField.setReadOnly(readOnly);
 		textField.getElement().getStyle().setProperty("fontFamily", "aletheiaSans,sans-serif");
 		textColor = textField.getElement().getStyle().getColor();
+
+		setReadOnly(readOnly);
+		
+		clear();
+	}
+	
+	public void setReadOnly(boolean readOnly) {
+		this.readOnly = readOnly;
+		textField.setReadOnly(readOnly);
 		
 		if (!readOnly) {
 			textField.addKeyUpHandler(new KeyUpHandler() {
@@ -72,13 +82,12 @@ public class TextContentView implements SelectionListener, VirtualKeyPressListen
 					if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER) {
 					} else if (event.getNativeKeyCode() == KeyCodes.KEY_TAB) {
 					} else {
-						notifyChangeListenersTextChanged();
+						if (!isReadOnly())
+							notifyChangeListenersTextChanged();
 					}
 				}
 			});
 		}
-		
-		clear();
 	}
 	
 	public Widget getWidget() {
@@ -145,8 +154,12 @@ public class TextContentView implements SelectionListener, VirtualKeyPressListen
 	public String getText() {
 		return textField.getText();
 	}
-	
-	
+		
+	public boolean isReadOnly() {
+		return readOnly;
+	}
+
+
 	/**
 	 * Listener for text change events (by user).
 	 * @author Christian Clausner

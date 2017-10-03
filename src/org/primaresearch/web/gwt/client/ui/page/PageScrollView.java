@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.primaresearch.maths.geometry.Dimension;
 import org.primaresearch.maths.geometry.Point;
 import org.primaresearch.maths.geometry.Rect;
 import org.primaresearch.web.gwt.client.page.PageLayoutC;
@@ -186,7 +187,7 @@ public class PageScrollView implements DocumentImageListener, PageSyncListener,
 	/**
 	 * Updates view panel width and height (called after the after the zoom has been changed).
 	 */
-	private void updateSize() {
+	private synchronized void updateSize() {
 		viewPanel.setWidth((int)(pageLayout.getWidth() * zoomFactor)+"px");
 		viewPanel.setHeight((int)(pageLayout.getHeight() * zoomFactor)+"px");
 	}
@@ -817,6 +818,30 @@ public class PageScrollView implements DocumentImageListener, PageSyncListener,
 
 	@Override
 	public void revertChangesFailed(Throwable caught) {
+	}
+
+	@Override
+	public void attributeSynchronized(ContentObjectC object) {
+	}
+
+	@Override
+	public void attributeSyncFailed(ContentObjectC object, Throwable caught) {
+	}
+
+	@Override
+	public void readingOrderLoaded() {
+	}
+
+	@Override
+	public void readingOrderLoadingFailed(Throwable caught) {
+	}
+
+	@Override
+	public void pageSizeReceived(Dimension pageSize) {
+	}
+
+	@Override
+	public void getPageSizeFailed(Throwable caught) {
 	}
 
 

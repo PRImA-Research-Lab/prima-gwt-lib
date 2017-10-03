@@ -18,6 +18,7 @@
   <inherits name="org.primaresearch.PrimaBasic"/>
   <inherits name="org.primaresearch.maths.PrimaMaths"/>
   <inherits name="org.primaresearch.dla.PrimaDla"/>
+  <inherits name="com.google.gwt.logging.Logging"/>
  
   <!-- Specify the app entry point class.                         -->
   <entry-point class='org.primaresearch.web.gwt.client.PrimaGwt'/>

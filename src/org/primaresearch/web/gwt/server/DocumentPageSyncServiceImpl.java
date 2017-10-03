@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,20 @@ package org.primaresearch.web.gwt.server;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -35,11 +40,16 @@ import org.primaresearch.dla.page.Page;
 import org.primaresearch.dla.page.io.PageWriter;
 import org.primaresearch.dla.page.io.UrlInput;
 import org.primaresearch.dla.page.io.xml.MetsMultiPageReader;
-import org.primaresearch.dla.page.io.xml.StreamTarget;
 import org.primaresearch.dla.page.io.xml.PageXmlInputOutput;
+import org.primaresearch.dla.page.io.xml.StreamTarget;
 import org.primaresearch.dla.page.io.xml.XmlPageReader;
+import org.primaresearch.dla.page.io.xml.XmlPageWriter;
 import org.primaresearch.dla.page.layout.PageLayout;
 import org.primaresearch.dla.page.layout.logical.ContentObjectRelation;
+import org.primaresearch.dla.page.layout.logical.Group;
+import org.primaresearch.dla.page.layout.logical.GroupMember;
+import org.primaresearch.dla.page.layout.logical.ReadingOrder;
+import org.primaresearch.dla.page.layout.logical.RegionRef;
 import org.primaresearch.dla.page.layout.physical.ContentObject;
 import org.primaresearch.dla.page.layout.physical.Region;
 import org.primaresearch.dla.page.layout.physical.shared.ContentType;
@@ -55,6 +65,7 @@ import org.primaresearch.dla.page.layout.physical.text.impl.Word;
 import org.primaresearch.dla.page.layout.shared.GeometricObject;
 import org.primaresearch.io.UnsupportedFormatVersionException;
 import org.primaresearch.io.xml.IOError;
+import org.primaresearch.maths.geometry.Dimension;
 import org.primaresearch.maths.geometry.Polygon;
 import org.primaresearch.shared.Pair;
 import org.primaresearch.shared.variable.StringValue;
@@ -64,6 +75,11 @@ import org.primaresearch.web.gwt.client.page.DocumentPageSyncService;
 import org.primaresearch.web.gwt.shared.RemoteException;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
 import org.primaresearch.web.gwt.shared.page.ContentObjectSync;
+import org.primaresearch.web.gwt.shared.page.GroupC;
+import org.primaresearch.web.gwt.shared.page.GroupMemberC;
+import org.primaresearch.web.gwt.shared.page.RegionRefC;
+import org.primaresearch.web.gwt.shared.user.DefaultPermissionNames;
+import org.primaresearch.web.gwt.shared.user.Permissions;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -82,6 +98,66 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	
 	private static final String PAGE_OBJECT_CACHE_ATTR = "PAGEObjectCache"; 
 	
+	//The doGet() method is not used by GWT, so we can use it for download requests from client side
+	@Override
+	protected void doGet( HttpServletRequest req, HttpServletResponse resp ) throws ServletException, IOException {
+		//super.doGet(req, resp);
+	
+		HttpSession session = req.getSession();
+		boolean canDownload = false;
+		if (session != null) {
+			Permissions permissions = (Permissions)session.getAttribute(SessionAttributes.PERMISSIONS);
+		
+			canDownload = permissions.isPermitted(DefaultPermissionNames.Download);
+		}
+		
+		if (!canDownload) { //Forbidden
+			resp.sendError(403);
+			return;
+		}
+		
+		//Download PAGE XML
+        String url = req.getParameter( "downloadPage" );
+        if ("null".equals(url))
+        	url = null;
+        //if (fileName == null || "null".equals(fileName))
+        	//url = (String)session.getAttribute(SessionAttributes.PAGE_CONTENT_WEB_SERVICE);
+		
+		String fileName = "PageContent.xml";
+
+        int BUFFER = 1024 * 100;
+        resp.setContentType( "application/octet-stream" );
+        resp.setHeader( "Content-Disposition:", "attachment;filename=" + "\"" + fileName + "\"" );
+        ServletOutputStream outputStream = resp.getOutputStream();
+        //resp.setContentLength( Long.valueOf( getfile(fileName).length() ).intValue() );
+        resp.setBufferSize( BUFFER );
+        
+        //Your IO code goes here to create a file and set to outputStream//
+        Page page = null;
+		try {
+			//page = getPageFile(null);
+			
+			//If no URL is given, use the session attribute
+			if (url == null)
+				url = (String)session.getAttribute(SessionAttributes.PAGE_CONTENT_WEB_SERVICE);
+	
+			//Try to get it from the session first
+			@SuppressWarnings("unchecked")
+			Map<String, Page> pageCache = (Map<String, Page>)session.getAttribute(PAGE_OBJECT_CACHE_ATTR);
+			if (pageCache == null) {
+				pageCache = new HashMap<String, Page>();
+				session.setAttribute(PAGE_OBJECT_CACHE_ATTR, pageCache);
+			}
+			
+			page = pageCache.get(url);
+			
+	        XmlPageWriter writer = PageXmlInputOutput.getWriterForLastestXmlFormat();
+	        writer.write(page, new StreamTarget(outputStream));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		outputStream.close();
+	}
 
 	@Override
 	public ArrayList<ContentObjectC> loadContentObjects(String url, String contentType) throws RemoteException {
@@ -126,7 +202,7 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 			//Regions
 			if ("Region".equals(contentType)) {
 				ArrayList<ContentObjectC> contentObjects = new ArrayList<ContentObjectC>(layout.getRegionCount());
-				List<Region> sorted = page.getLayout().getRegionsSorted();
+				List<Region> sorted = page.getLayout().getRegionsSorted(true);
 				for (int i=0; i<sorted.size(); i++) {
 					Region region = sorted.get(i);
 					
@@ -145,7 +221,7 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 			//Lines
 			else if ("TextLine".equals(contentType)) {
 				ArrayList<ContentObjectC> contentObjects = new ArrayList<ContentObjectC>(layout.getRegionCount());
-				List<Region> sorted = page.getLayout().getRegionsSorted();
+				List<Region> sorted = page.getLayout().getRegionsSorted(true);
 				for (int i=0; i<sorted.size(); i++) {
 					Region region = sorted.get(i);
 					if (! (region instanceof TextRegion))
@@ -170,7 +246,7 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 			//Words
 			else if ("Word".equals(contentType)) {
 				ArrayList<ContentObjectC> contentObjects = new ArrayList<ContentObjectC>(layout.getRegionCount());
-				List<Region> sorted = page.getLayout().getRegionsSorted();
+				List<Region> sorted = page.getLayout().getRegionsSorted(true);
 				for (int i=0; i<sorted.size(); i++) {
 					Region region = sorted.get(i);
 					if (! (region instanceof TextRegion))
@@ -200,7 +276,7 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 			//Glyphs
 			else if ("Glyph".equals(contentType)) {
 				ArrayList<ContentObjectC> contentObjects = new ArrayList<ContentObjectC>(layout.getRegionCount());
-				List<Region> sorted = page.getLayout().getRegionsSorted();
+				List<Region> sorted = page.getLayout().getRegionsSorted(true);
 				for (int i=0; i<sorted.size(); i++) {
 					Region region = sorted.get(i);
 					if (! (region instanceof TextRegion))
@@ -261,7 +337,12 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		return null;
 	}
 	
+	@Override
 	public Boolean putTextContent(String url, ContentType type, String contentObjectId, String text) throws RemoteException {
+		
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+		
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -278,6 +359,39 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		TextObject textObj = (TextObject)obj;
 		
 		textObj.setText(text);
+		
+		return true;
+	}
+	
+	@Override
+	public Boolean setAttributeValue(String url, ContentType type, String contentObjectId, Variable attr) throws RemoteException {
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+		
+		Page page = getPageFile(url);
+		
+		if (page == null) //No page object in cache
+			return false;
+		
+		ContentObject obj = page.getLayout().getObject(type, contentObjectId);
+		
+		if (obj == null)
+			return false;
+		
+		VariableMap attrs = obj.getAttributes(); 
+		if (attrs == null || attrs.getSize() == 0)
+			return false;
+
+		Variable oldAttr = attrs.get(attr.getName());
+		if (oldAttr == null)
+			return false;
+		
+		try {
+			oldAttr.setValue(attr.getValue());
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RemoteException(e.getMessage());
+		} 
 		
 		return true;
 	}
@@ -380,7 +494,7 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		//If no URL is given, use the session attribute
 		if (url == null)
 			url = (String)session.getAttribute(SessionAttributes.PAGE_CONTENT_WEB_SERVICE);
-
+		
 		Page page = null;
 		
 		//Try to get it from the session first
@@ -398,9 +512,21 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		
 			try {
 				XmlPageReader reader = PageXmlInputOutput.getReader();
+				
 				String uidParam = "Uid="+(String)session.getAttribute(SessionAttributes.USER_ID);
-				URL getAttachmentUrl = new URL(url + (url.contains("?") ? ("&"+uidParam) : ("?"+uidParam)));
+				
+				URL getAttachmentUrl = null;
+				if (!"demo".equals(url))
+					getAttachmentUrl = new URL(url + (url.contains("?") ? ("&"+uidParam) : ("?"+uidParam)));
+				else {
+					//Demo mode
+					getAttachmentUrl = this.getClass().getResource("/org/primaresearch/web/aletheia/res/demo.xml");
+					giveDemoPermissions();
+					//For security, we better remove all other cached documents
+					pageCache.clear();
+				}
 				System.out.println("Get PAGE file: "+getAttachmentUrl);
+				
 				page = reader.read(new UrlInput(getAttachmentUrl));
 				//page = XmlInputOutput.readPage("C:\\junit\\page.xml");
 				
@@ -437,6 +563,36 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		
 		return page;
 	}
+	
+	private void giveDemoPermissions() {
+		try {
+			HttpServletRequest request = this.getThreadLocalRequest();
+			HttpSession session = request.getSession();
+			Permissions permissions = new Permissions();
+			
+			DefaultPermissionNames.giveDemoPermissions(permissions);
+			
+			session.setAttribute(SessionAttributes.PERMISSIONS, permissions);
+		} catch (Exception exc) {
+			exc.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Checks if the given action is permitted
+	 */
+	private boolean isPermitted(String permissionName) {
+		try {
+			HttpServletRequest request = this.getThreadLocalRequest();
+			HttpSession session = request.getSession();
+			Permissions permissions = (Permissions)session.getAttribute(SessionAttributes.PERMISSIONS);
+			
+			return permissions.isPermitted(permissionName);
+		} catch (Exception exc) {
+			exc.printStackTrace();
+		}
+		return false;
+	}
 
 	/**
 	 * Adds a new content object on server side. The object type is specified by the given
@@ -446,6 +602,10 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	 */
 	@Override
 	public ContentObjectSync addContentObject(String url, ContentObjectC object) throws RemoteException {
+		
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -519,6 +679,10 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	
 	@Override
 	public Boolean updateOutline(String url, ContentType type, String contentObjectId, Polygon outline) throws RemoteException {
+		
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -536,6 +700,10 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	
 	@Override
 	public Boolean deleteContentObject(String url, ContentType type, String contentObjectId) throws RemoteException {
+		
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -560,6 +728,9 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	
 	@Override
 	public Boolean save(String url) throws RemoteException {
+		if (!isPermitted(DefaultPermissionNames.Save))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Save);
+
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -730,6 +901,10 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 	public Pair<ContentObjectC,ArrayList<String>> setRegionType(String url, RegionType oldType,
 			RegionType newType, String newSubType, String contentObjectId)
 			throws RemoteException {
+		
+		if (!isPermitted(DefaultPermissionNames.Edit))
+			throw new RemoteException("Not permitted: "+DefaultPermissionNames.Edit);
+
 		Page page = getPageFile(url);
 		
 		if (page == null) //No page object in cache
@@ -814,6 +989,68 @@ public class DocumentPageSyncServiceImpl extends RemoteServiceServlet implements
 		pageCache.remove(url);
 
 		return true;
+	}
+	
+	@Override
+	public GroupC loadReadingOrder(String url) throws RemoteException {
+		//Get the page object
+		Page page = getPageFile(url);
+		
+		//Get reading order
+		if (page != null && page.getLayout() != null) {
+			PageLayout layout = page.getLayout();
+			
+			ReadingOrder readingOrder = layout.getReadingOrder(); 
+			if (readingOrder != null && readingOrder.getRoot() != null) {
+				GroupC root = new GroupC();
+				fillClientReadingOrderGroup(root, readingOrder.getRoot());
+				return root;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Creates a lightweight client side reading order from the conventional reading order structure (recursive).  
+	 * @param groupC Client side reading order group to be filled
+	 * @param group Conventional reading order group (source)
+	 */
+	private void fillClientReadingOrderGroup(GroupC groupC, Group group) {
+		groupC.id = group.getId().toString();
+		groupC.caption = group.getCaption();
+		groupC.ordered = group.isOrdered();
+		int count = group.getSize(); 
+		if (count > 0) {
+			groupC.members = new LinkedList<GroupMemberC>();
+			for (int i=0; i<count; i++) {
+				GroupMember member = group.getMember(i);
+				if (member != null) {
+					GroupMemberC memberC = null;
+					if (member instanceof RegionRef) 
+						memberC = new RegionRefC(((RegionRef)member).getRegionId().toString());
+					else {//Group
+						memberC = new GroupC();
+						fillClientReadingOrderGroup((GroupC)memberC, (Group)member);
+					}
+					groupC.members.add(memberC);
+				}
+			}
+		}
+	}
+
+	@Override
+	public Dimension getPageSize(String url) throws RemoteException {
+		//Get the page object
+		Page page = getPageFile(url);
+		
+		if (page != null && page.getLayout() != null) {
+			Dimension size = new Dimension();
+			size.width = page.getLayout().getWidth();
+			size.height = page.getLayout().getHeight();
+			return size;
+		}
+		
+		return null;
 	}
 
 }

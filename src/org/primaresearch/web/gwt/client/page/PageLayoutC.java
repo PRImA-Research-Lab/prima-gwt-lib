@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.primaresearch.dla.page.layout.physical.shared.ContentType;
 import org.primaresearch.dla.page.layout.physical.shared.LowLevelTextType;
 import org.primaresearch.dla.page.layout.physical.shared.RegionType;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
+import org.primaresearch.web.gwt.shared.page.GroupC;
 
 /**
  * Lightweight page layout class for use on client side (browser; 'C' for client).
@@ -38,8 +39,8 @@ public class PageLayoutC {
 	public static final String TYPE_Border 		= "Border";
 	public static final String TYPE_Printspace 	= "PrintSpace";
 
-	private int width = 1000;
-	private int height = 1000;
+	private int width = 2000;
+	private int height = 2000;
 	
 	private String id;
 	
@@ -49,6 +50,8 @@ public class PageLayoutC {
 	private List<ContentObjectC> glyphs = null;
 	private List<ContentObjectC> border = null;
 	private List<ContentObjectC> printSpace = null;
+	
+	private GroupC readingOrder;
 	
 	//private MetaData metaData = null;
 	
@@ -296,6 +299,9 @@ public class PageLayoutC {
 		List<ContentObjectC> content = getContent(object.getType());
 		if (content != null) {
 			content.remove(object);
+			//Update reading order
+			if (readingOrder != null && object.getType() instanceof RegionType)
+				readingOrder.removeRegionRef(object.getId());
 		}
 	}
 	
@@ -333,6 +339,22 @@ public class PageLayoutC {
 		return objects.get(0); //Jump to first object
 	}
 
+	/**
+	 * Returns the reading order tree
+	 * @return Root group of reading order
+	 */
+	public GroupC getReadingOrder() {
+		return readingOrder;
+	}
+
+	/**
+	 * Sets the reading order
+	 * @param readingOrder Root group of reading order
+	 */
+	public void setReadingOrder(GroupC readingOrder) {
+		this.readingOrder = readingOrder;
+	}
+
 	//public MetaData getMetaData() {
 	//	return metaData;
 	//}
@@ -341,6 +363,6 @@ public class PageLayoutC {
 	//	this.metaData = metaData;
 	//}
 
-
+	
 	
 }

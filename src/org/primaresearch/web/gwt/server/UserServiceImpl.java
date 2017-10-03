@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Date;
 
 import javax.crypto.Cipher;
@@ -107,18 +106,21 @@ public class UserServiceImpl extends RemoteServiceServlet implements UserService
 	
 	@Override
 	public SessionData logOn(String applicationId, String documentId, String attachmentId, String userData) throws RemoteException {
-		
-		if (DEBUG)
-			System.out.println("Logging on: "+applicationId + ", " + documentId + ", " + attachmentId + ", " + userData);
-		
-		if (userData == null || userData.isEmpty())
-			return null;
-
 		try {
-		
 			//Get session
 			HttpServletRequest request = this.getThreadLocalRequest();
 			HttpSession session = request.getSession();
+			
+			//Reset page content web service to 'demo' (supplies a demo document page in case the logon fails)
+			//session.setAttribute(SessionAttributes.PAGE_CONTENT_WEB_SERVICE, "demo");
+			
+			if (DEBUG)
+				System.out.println("Logging on: "+applicationId + ", " + documentId + ", " + attachmentId + ", " + userData);
+			
+			if (userData == null || userData.isEmpty())
+				return null;
+
+		
 			if (DEBUG) {
 				System.out.println(" HttpServletRequest:");
 				System.out.println("   Server name: "+this.getThreadLocalRequest().getServerName());
@@ -200,7 +202,7 @@ public class UserServiceImpl extends RemoteServiceServlet implements UserService
 			if (DEBUG)
 				System.out.println("  Getting permissions");
 			Permissions permissions = getPermissions(appData.integrationServiceUrl, token.uid, attachmentId);
-			session.setAttribute(SessionAttributes.PERMISSIONS, userAuthenticated);
+			session.setAttribute(SessionAttributes.PERMISSIONS, permissions);
 	
 			//Return value
 			SessionData sessionData = new SessionData();
@@ -383,13 +385,17 @@ public class UserServiceImpl extends RemoteServiceServlet implements UserService
 	 */
 	private Permissions getPermissions(String webServiceUrl, String userId, String attachmentId) {
 		
-		ArrayList<String> permissionStrings = new ArrayList<String>();
+		Permissions ret = new Permissions();
 
 		//Soap request
 		try {
 			SimpleSoapRequest request = new SimpleSoapRequest(webServiceUrl, "getDocumentAttachmentPermissions");
 			request.addMethodParameter("Uid", userId);
 			request.addMethodParameter("Aid", attachmentId);
+
+			if (DEBUG)
+				System.out.println("  Sending SOAP request: "+webServiceUrl+" getDocumentAttachmentPermissions Uid:"+userId);
+
 			String soapResponseContent = request.send();
 
 			InputStream is = new ByteArrayInputStream(soapResponseContent.getBytes());
@@ -397,22 +403,40 @@ public class UserServiceImpl extends RemoteServiceServlet implements UserService
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(is);
-			
+
+			if (DEBUG)
+				System.out.println("  Parsing SOAP response...");
+
 			Node root = doc.getFirstChild();
 			if (root != null) {
+				if (DEBUG)
+					System.out.println("    Root: "+root.getNodeName());
 				Node node = root.getFirstChild();
 				while (node != null) {
+					if (DEBUG)
+						System.out.println("      Child: "+node.getNodeName());
+					
 					if ("DocumentAttachmentPermissions".equals(node.getNodeName())) {
 
 						Node permission = node.getFirstChild();
 						while (permission != null) {
+							if (DEBUG)
+								System.out.println("        Child: "+permission.getNodeName());
 
 							if ("Permission".equals(permission.getNodeName())) {
-								NamedNodeMap attrs = node.getAttributes();
-								if (attrs != null && attrs.getNamedItem("name") != null) {
+								NamedNodeMap attrs = permission.getAttributes();
+								if (attrs != null && attrs.getNamedItem("name") != null
+										&& attrs.getNamedItem("granted") != null) {
 									Node attr = attrs.getNamedItem("name");
-									permissionStrings.add(attr.getNodeValue());
+									String name = attr.getNodeValue();
+									attr = attrs.getNamedItem("granted");
+									boolean granted = Boolean.parseBoolean(attr.getNodeValue());
+									
+									if (DEBUG)
+										System.out.println("  Permission '"+name+"' - "+granted);
+									ret.addPermissionEntry(name, granted);
 								}
+								
 							}
 							permission = permission.getNextSibling();
 						}
@@ -426,9 +450,6 @@ public class UserServiceImpl extends RemoteServiceServlet implements UserService
 			exc.printStackTrace();
 			return null;
 		}
-		
-		Permissions ret = new Permissions();
-		ret.init(permissionStrings.toArray(new String[permissionStrings.size()]));		
 		
 		return ret;
 	}

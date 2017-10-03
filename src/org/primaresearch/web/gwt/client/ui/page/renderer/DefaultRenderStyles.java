@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,9 @@ public class DefaultRenderStyles implements RenderStyles {
 		styles.put("pageContent.NoiseRegion", 	new RenderStyle("rgb(255,0,0)", "rgba(255,0,0,0.2)", 1));
 		styles.put("pageContent.SeparatorRegion", 	new RenderStyle("rgb(255,0,255)", "rgba(255,0,255,0.2)", 1));
 		styles.put("pageContent.TableRegion", 	new RenderStyle("rgb(139,69,19)", "rgba(139,69,19,0.2)", 1));
+		styles.put("pageContent.AdvertRegion", 	new RenderStyle("rgb(70, 130, 180)", "rgba(70, 130, 180,0.2)", 1));
+		styles.put("pageContent.ChemRegion", 	new RenderStyle("rgb(255, 140,   0)", "rgba(255, 140,   0,0.2)", 1));
+		styles.put("pageContent.MusicRegion", 	new RenderStyle("rgb(148,   0, 211)", "rgba(148,   0, 211,0.2)", 1));
 		styles.put("pageContent.UnknownRegion", new RenderStyle("rgb(139,139,139)", "rgba(139,139,139,0.2)", 1));
 
 		//Text line, word, glyph
@@ -85,6 +88,12 @@ public class DefaultRenderStyles implements RenderStyles {
 		styles.put("pageContent.Border", 		new RenderStyle("rgb(255,99,71)", "rgba(255,99,71,0.2)", 1));
 		styles.put("pageContent.PrintSpace", 	new RenderStyle("rgb(0,100,0)", "rgba(0,100,0,0.2)", 1));
 
+		//Reading Order
+		styles.put("readingOrder.Level0", 		new RenderStyle("rgb(220,20,60)", "rgba(220,20,60,0.4)", 1));
+		styles.put("readingOrder.Level1", 		new RenderStyle("rgb(148,0,211)", "rgba(148,0,211,0.4)", 1));
+		styles.put("readingOrder.Level2", 		new RenderStyle("rgb(0,0,139)", "rgba(0,0,139,0.4)", 1));
+		styles.put("readingOrder.Center", 		new RenderStyle("rgb(139,0,0)", "rgba(139,0,0,0.4)", 1));
+		
 		//Fallback
 		styles.put("Plain", new RenderStyle("rgb(200,200,200)", "rgba(200,200,200,0.2)", 1));
 

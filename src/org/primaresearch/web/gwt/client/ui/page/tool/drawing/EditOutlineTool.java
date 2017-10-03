@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.primaresearch.web.gwt.client.ui.page.PageScrollView;
 import org.primaresearch.web.gwt.client.ui.page.SelectionManager;
 import org.primaresearch.web.gwt.client.ui.page.SelectionManager.SelectionListener;
 import org.primaresearch.web.gwt.client.ui.page.renderer.PageRenderer;
-import org.primaresearch.web.gwt.client.ui.page.renderer.PolygonRendererHelper;
+import org.primaresearch.web.gwt.client.ui.page.renderer.RendererHelper;
 import org.primaresearch.web.gwt.client.ui.page.tool.controls.ContentObjectToolbarButton;
 import org.primaresearch.web.gwt.client.ui.page.tool.controls.ContentObjectToolbar;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
@@ -99,7 +99,7 @@ public class EditOutlineTool extends BasePageViewTool implements SelectionListen
 		pageView.addHoverWidget(toolbar);
 
 		//OK button
-		applyWidget = new ContentObjectToolbarButton("icons/tick.png", "Done");
+		applyWidget = new ContentObjectToolbarButton("img/tick.png", "Done");
 		toolbar.add(applyWidget);
 		applyWidget.addClickHandler(new ClickHandler() {
 			@Override
@@ -115,7 +115,7 @@ public class EditOutlineTool extends BasePageViewTool implements SelectionListen
 		});
 		
 		//Cancel button
-		cancelWidget = new ContentObjectToolbarButton("icons/cross.png", "Cancel");
+		cancelWidget = new ContentObjectToolbarButton("img/cross.png", "Cancel");
 		toolbar.add(cancelWidget);
 		cancelWidget.addClickHandler(new ClickHandler() {
 			@Override
@@ -125,15 +125,15 @@ public class EditOutlineTool extends BasePageViewTool implements SelectionListen
 		});
 		
 		//Separator
-		Image sep = new Image("icons/separator.png");
+		Image sep = new Image("img/separator.png");
 		toolbar.add(sep);
 		
 		//Edit modes (add/move and erase)
-		final ContentObjectToolbarButton addAndMoveMode = new ContentObjectToolbarButton("icons/pen.png", "Move and add points", true);
+		final ContentObjectToolbarButton addAndMoveMode = new ContentObjectToolbarButton("img/pen.png", "Move and add points", true);
 		toolbar.add(addAndMoveMode);
 		addAndMoveMode.setDown(true);
 
-		final ContentObjectToolbarButton deleteMode = new ContentObjectToolbarButton("icons/eraser.png", "Delete points", true);
+		final ContentObjectToolbarButton deleteMode = new ContentObjectToolbarButton("img/eraser.png", "Delete points", true);
 		toolbar.add(deleteMode);
 		
 		addAndMoveMode.addClickHandler(new ClickHandler() {
@@ -336,7 +336,7 @@ public class EditOutlineTool extends BasePageViewTool implements SelectionListen
 		
 		//Draw the selected outline in red
 		RenderStyle style = new RenderStyle("rgb(255,0,0)", "transparent", 1.0);
-		PolygonRendererHelper.drawPolygon(context, polygon, style, renderer.getZoomFactor(), true, false);
+		RendererHelper.drawPolygon(context, polygon, style, renderer.getZoomFactor(), true, false);
 
 		//Delete mode
 		if (deletePointsMode) {

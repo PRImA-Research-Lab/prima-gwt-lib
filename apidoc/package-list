@@ -15,3 +15,4 @@ org.primaresearch.web.gwt.server
 org.primaresearch.web.gwt.shared
 org.primaresearch.web.gwt.shared.page
 org.primaresearch.web.gwt.shared.user
+org.primaresearch.web.gwt.shared.variable

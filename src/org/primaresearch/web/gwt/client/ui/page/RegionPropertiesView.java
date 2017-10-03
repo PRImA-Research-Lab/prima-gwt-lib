@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,25 @@ package org.primaresearch.web.gwt.client.ui.page;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Comparator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.primaresearch.shared.variable.Variable;
 import org.primaresearch.web.gwt.client.ui.page.SelectionManager.SelectionListener;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
 
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.HTMLTable.Cell;
 import com.google.gwt.user.client.ui.Widget;
 
 /**
@@ -37,10 +45,14 @@ import com.google.gwt.user.client.ui.Widget;
  * @author Christian Clausner
  *
  */
-public class RegionPropertiesView implements SelectionListener {
+public class RegionPropertiesView implements SelectionListener, ClickHandler {
 
 	private FlexTable table = new FlexTable();
 	private PropertiesViewVariableComparator comparator = new PropertiesViewVariableComparator();
+	private List<Variable> attrs = null;
+	private static final int propertyOffset = 2;
+	private ContentObjectC contentObject = null;
+	private Set<PropertiesViewClickListener> listeners = new HashSet<PropertiesViewClickListener>();
 	
 	public RegionPropertiesView() {
 		clear();
@@ -48,6 +60,14 @@ public class RegionPropertiesView implements SelectionListener {
 		
 	public Widget getWidget() {
 		return table;
+	}
+	
+	public void addListener(PropertiesViewClickListener listener) {
+		listeners.add(listener);
+	}
+	
+	public void removeListener(PropertiesViewClickListener listener) {
+		listeners.remove(listener);
 	}
 
 	@Override
@@ -59,7 +79,13 @@ public class RegionPropertiesView implements SelectionListener {
 		update(null);
 	}
 	
+	public void setPositionOfEmptyAttributes(boolean bottomOfList) {
+		comparator.setPositionOfEmptyAttributes(bottomOfList);
+	}
+	
 	private void update(Set<ContentObjectC> objects) {
+		contentObject = null;
+		
 		table.removeAllRows();
 	
 		if (objects == null || objects.size() == 0) {
@@ -72,35 +98,63 @@ public class RegionPropertiesView implements SelectionListener {
 			table.setText(0, 0, "Multiple objects");
 		} 
 		else { //Single object
-			ContentObjectC obj = objects.iterator().next();
+			contentObject = objects.iterator().next();
 			
 			//Header (object type)
-			table.setText(0, 0, obj.getType().getName());
+			table.setText(0, 0, contentObject.getType().getName());
 			table.getFlexCellFormatter().setColSpan(0, 0, 2);
 			table.getFlexCellFormatter().addStyleName(0, 0, "propertiesHeading");
 			
 			//ID
 			table.setText(1, 0, "ID");
-			table.setText(1, 1, obj.getId());
+			table.setText(1, 1, contentObject.getId());
 			
-			if (obj.getAttributes() != null) {
-				//Collect attributes
-				List<Variable> vars = new ArrayList<Variable>();
-				for (int i=0; i<obj.getAttributes().getSize(); i++) {
-					vars.add(obj.getAttributes().get(i));
+			if (contentObject.getAttributes() != null) {
+				try {
+					//Collect attributes
+					attrs = new ArrayList<Variable>();
+					for (int i=0; i<contentObject.getAttributes().getSize(); i++) {
+						attrs.add(contentObject.getAttributes().get(i));
+					}
+				} catch (Exception exc) {
+					Logger logger = Logger.getLogger("RegionPropView");
+					logger.log(Level.SEVERE, "Creating local attribute list: "+exc.toString());
+					exc.printStackTrace();
 				}
 
-				//Sort
-				Collections.sort(vars, comparator);
-				
-				//Add to table
-				for (int i=0; i<vars.size(); i++) {
-					addAttributeToTable(vars.get(i), i+2);
+				try {
+					//Sort
+					Collections.sort(attrs, comparator);
+				} catch (Exception exc) {
+					Logger logger = Logger.getLogger("RegionPropView");
+					logger.log(Level.SEVERE,  "Sorting local attribute list: "+exc.toString());
+					exc.printStackTrace();
+				}
+
+				try {
+					//Add to table
+					for (int i=0; i<attrs.size(); i++) {
+						addAttributeToTable(attrs.get(i), i+propertyOffset);
+					}
+				} catch (Exception exc) {
+					Logger logger = Logger.getLogger("RegionPropView");
+					logger.log(Level.SEVERE,  "Adding local attribute list to table: "+exc.toString());
+					exc.printStackTrace();
 				}
 			}
+			
+			table.addClickHandler(this);
+			if (listeners.isEmpty())
+				table.getElement().getStyle().setCursor(Style.Cursor.DEFAULT);
+			else
+				table.getElement().getStyle().setCursor(Style.Cursor.POINTER);
+				
 		}
 	}
 	
+	/**
+	 * Adds the given page content object attribute to the main table of this view. 
+	 */
 	private void addAttributeToTable(Variable attr, int row) {
 		table.setText(row, 0, attr.getName());
 		String text = "";
@@ -109,6 +163,54 @@ public class RegionPropertiesView implements SelectionListener {
 		table.setText(row, 1, text);
 	}
 	
+	@Override
+	public void onClick(ClickEvent event) {
+		
+		if (contentObject == null)
+			return;
+		
+		Cell cell = table.getCellForEvent(event);
+		if (cell != null) {
+			
+			int row = cell.getRowIndex();
+			if (row == 0)
+				notifyListenersPropertyViewHeadingClicked(event, contentObject);
+			else if (row >= propertyOffset && attrs != null) {
+				int index = row-propertyOffset;
+				if (index < attrs.size())
+					notifyListenersContentObjectPropertyClicked(event, cell.getElement().getAbsoluteLeft(), cell.getElement().getAbsoluteBottom(), 
+																contentObject, attrs.get(index));
+			}
+		}
+	}
+	
+	private void notifyListenersContentObjectPropertyClicked(ClickEvent event, int cellLeft, int cellBottom, ContentObjectC object, Variable property) {
+		for (Iterator<PropertiesViewClickListener> it = listeners.iterator(); it.hasNext(); ) {
+			try {
+				it.next().contentObjectPropertyClicked(event, cellLeft, cellBottom, object, property);
+			} catch (Exception exc) {
+				exc.printStackTrace();
+			}
+		}
+	}
+
+	private void notifyListenersPropertyViewHeadingClicked(ClickEvent event, ContentObjectC object) {
+		for (Iterator<PropertiesViewClickListener> it = listeners.iterator(); it.hasNext(); ) {
+			try {
+				it.next().propertyViewHeadingClicked(event, object);
+			} catch (Exception exc) {
+				exc.printStackTrace();
+			}
+		}
+	}
+
+	
+	/**
+	 * Comparator for sorting page content object attributes in a predefined order
+	 * 
+	 * @author Christian Clausner
+	 *
+	 */
 	public static class PropertiesViewVariableComparator implements Comparator<Variable>, Serializable {
 		
 		private static final long serialVersionUID = 1L;
@@ -166,8 +268,14 @@ public class RegionPropertiesView implements SelectionListener {
 			sortIndexes.put("comments",				430);
 		}
 		
+		private boolean emptyAttributesAtbottomOfList = true;
+		
 		public PropertiesViewVariableComparator() {
 			super();
+		}
+		
+		public void setPositionOfEmptyAttributes(boolean bottomOfList) {
+			emptyAttributesAtbottomOfList = bottomOfList;
 		}
 
 		@Override
@@ -175,14 +283,38 @@ public class RegionPropertiesView implements SelectionListener {
 			if (v1 == null || v2 == null)
 				return 0;
 			int sortIndex1 = sortIndexes.containsKey(v1.getName()) ? sortIndexes.get(v1.getName()) : 500000;
-			if (v1.getValue() == null)
+			if (v1.getValue() == null && emptyAttributesAtbottomOfList)
 				sortIndex1 += 1000000; //Empty values at the bottom
-			int sortIndex2 = sortIndexes.containsKey(v1.getName()) ? sortIndexes.get(v2.getName()) : 500000;
-			if (v2.getValue() == null)
+			int sortIndex2 = sortIndexes.containsKey(v2.getName()) ? sortIndexes.get(v2.getName()) : 500000;
+			if (v2.getValue() == null && emptyAttributesAtbottomOfList)
 				sortIndex2 += 1000000; //Empty values at the bottom
 			return sortIndex1 - sortIndex2;
 		}
-
-		
 	}
+	
+	/**
+	 * Listener interface for special click events in the page content object properties view
+	 * 
+	 * @author Christian Clausner
+	 *
+	 */
+	public static interface PropertiesViewClickListener {
+		
+		/**
+		 * 
+		 * @param event
+		 * @param object
+		 * @param property
+		 */
+		public void contentObjectPropertyClicked(ClickEvent event, int cellLeft, int cellBottom, ContentObjectC object, Variable property);
+		
+		/**
+		 * 
+		 * @param event
+		 * @param object
+		 */
+		public void propertyViewHeadingClicked(ClickEvent event, ContentObjectC object);
+	}
+
+
 }

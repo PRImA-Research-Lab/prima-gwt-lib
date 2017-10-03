@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.primaresearch.web.gwt.shared.user.Permissions;
 import org.primaresearch.web.gwt.shared.user.SessionData;
 
 import com.google.gwt.core.client.GWT;
@@ -60,7 +61,27 @@ public class UserManager {
 			return sessionData.getDocumentImageUrl;
 		return null;
 	}
+	
+	/**
+	 * Returns the user's permissions
+	 * @return
+	 */
+	public Permissions getPermissions() {
+		if (sessionData != null)
+			return sessionData.permissions;
+		return null;
+	}
 
+	/**
+	 * Sets the user's permissions (affects only the client side; not sent to server side (for security reasons))
+	 * @return
+	 */
+	public void setPermissions(Permissions permissions) {
+		if (sessionData == null)
+			sessionData = new SessionData();
+		sessionData.permissions = permissions;
+	}
+	
 	/**
 	 * Logs the user on.
 	 * @param applicationId Web application ID

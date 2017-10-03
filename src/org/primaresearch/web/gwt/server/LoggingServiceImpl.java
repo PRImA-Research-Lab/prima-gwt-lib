@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class LoggingServiceImpl extends RemoteServiceServlet implements LoggingS
 	
 	public LoggingServiceImpl() {
 		try {
-			logger = Logger.getGlobal();
+			logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 		} catch (Exception exc) {
 			exc.printStackTrace();
 		}

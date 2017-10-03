@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,13 @@ import java.util.ArrayList;
 
 import org.primaresearch.dla.page.layout.physical.shared.ContentType;
 import org.primaresearch.dla.page.layout.physical.shared.RegionType;
+import org.primaresearch.maths.geometry.Dimension;
 import org.primaresearch.maths.geometry.Polygon;
 import org.primaresearch.shared.Pair;
+import org.primaresearch.shared.variable.Variable;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
 import org.primaresearch.web.gwt.shared.page.ContentObjectSync;
+import org.primaresearch.web.gwt.shared.page.GroupC;
 
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
@@ -36,7 +39,11 @@ public interface DocumentPageSyncServiceAsync {
 
 	void loadContentObjects(String url, String contentType, AsyncCallback<ArrayList<ContentObjectC>> callback);
 	
+	void loadReadingOrder(String url, AsyncCallback<GroupC> callback);
+	
 	void putTextContent(String url, ContentType type, String contentObjectId, String text, AsyncCallback<Boolean> callback);
+	
+	void setAttributeValue(String url, ContentType type, String contentObjectId, Variable attr, AsyncCallback<Boolean> callback);
 
 	void setRegionType(String url, RegionType oldType, RegionType newType, String newSubType, String contentObjectId, AsyncCallback<Pair<ContentObjectC,ArrayList<String>>> callback);
 
@@ -60,4 +67,5 @@ public interface DocumentPageSyncServiceAsync {
 	
 	void revertChanges(String url, AsyncCallback<Boolean> callback);
 
+	void getPageSize(String url, AsyncCallback<Dimension> callback);
 }

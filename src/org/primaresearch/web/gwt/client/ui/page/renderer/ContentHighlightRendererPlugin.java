@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ public class ContentHighlightRendererPlugin implements RendererPlugin {
 				
 				RenderStyle style = highlightStyle == null 	? renderer.getRenderStyles().getStyle("pageContent."+obj.getType().getName())
 															: highlightStyle;
-				PolygonRendererHelper.drawPolygon(	renderer.getContext(), 
+				RendererHelper.drawPolygon(	renderer.getContext(), 
 													obj.getCoords(), 
 													style, renderer.getZoomFactor(), true, true);
 			}

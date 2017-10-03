@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,21 +146,21 @@ public class PageRenderer implements DocumentImageListener {
 	}
 	
 	/**
-	 * Draws grey background
+	 * Draws grey tiled background
 	 */
 	private void drawBackground() {
 		CssColor liteGrey = CssColor.make(200, 200, 200);
-		CssColor darkGrey = CssColor.make(100, 100, 100);
+		CssColor darkGrey = CssColor.make(150, 150, 150);
 		
 		boolean dark;
 		boolean startLineDark = false;
 		final int rectSize = 200;
-		for (int x=0; x<canvas.getCoordinateSpaceWidth(); x+=rectSize) {
+		for (int x=0; x<pageLayout.getWidth(); x+=rectSize) {
 			dark = startLineDark;
-			for (int y=0; y<canvas.getCoordinateSpaceWidth(); y+=rectSize) {
+			for (int y=0; y<pageLayout.getHeight(); y+=rectSize) {
 				context.setFillStyle(dark ? darkGrey : liteGrey);
-				context.fillRect(x, y, x+rectSize, y+rectSize);
-				context.fill();
+				context.fillRect(x, y, rectSize, rectSize);
+				//context.fill();
 				dark = !dark;
 			}
 			startLineDark = !startLineDark;

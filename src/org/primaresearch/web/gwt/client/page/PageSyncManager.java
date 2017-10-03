@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 PRImA Research Lab, University of Salford, United Kingdom
+ * Copyright 2015 PRImA Research Lab, University of Salford, United Kingdom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,12 @@ import java.util.Set;
 
 import org.primaresearch.dla.page.layout.physical.shared.LowLevelTextType;
 import org.primaresearch.dla.page.layout.physical.shared.RegionType;
+import org.primaresearch.maths.geometry.Dimension;
 import org.primaresearch.shared.Pair;
+import org.primaresearch.shared.variable.Variable;
 import org.primaresearch.web.gwt.shared.page.ContentObjectC;
 import org.primaresearch.web.gwt.shared.page.ContentObjectSync;
+import org.primaresearch.web.gwt.shared.page.GroupC;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.user.client.Window;
@@ -73,6 +76,39 @@ public class PageSyncManager {
 	}
 	
 	/**
+	 * Triggers loading the reading order from the server.
+	 */
+	public void loadReadingOrderAsync() {
+	    AsyncCallback<GroupC> callback = new AsyncCallback<GroupC>() {
+	    	public void onFailure(Throwable caught) {
+	    		notifyListenersReadingOrderLoadingFailed(caught);
+	    	}
+
+	    	public void onSuccess(GroupC readingOrderRoot) {
+	    		pageLayout.setReadingOrder(readingOrderRoot);
+	    		notifyListenersReadingOrderLoaded();
+	    	}
+	    };
+	    syncService.loadReadingOrder(url, callback);
+	}
+	
+	/**
+	 * Triggers loading the page size from the server.
+	 */
+	public void getPageSizeAsync() {
+	    AsyncCallback<Dimension> callback = new AsyncCallback<Dimension>() {
+	    	public void onFailure(Throwable caught) {
+	    		notifyListenersGetPageSizeFailed(caught);
+	    	}
+
+	    	public void onSuccess(Dimension size) {
+	    		notifyListenersPageSizeReceived(size);
+	    	}
+	    };
+	    syncService.getPageSize(url, callback);
+	}
+	
+	/**
 	 * Sends the text content of the given object to the server.
 	 * @param object Text container content object
 	 */
@@ -87,6 +123,23 @@ public class PageSyncManager {
 	    	}
 	    };
 	    syncService.putTextContent(url, object.getType(), object.getId(), object.getText(), callback);
+	}
+	
+	/**
+	 * Sends the text content of the given object to the server.
+	 * @param object Text container content object
+	 */
+	public void syncAttribute(final ContentObjectC object, final Variable attr) {
+	    AsyncCallback<Boolean> callback = new AsyncCallback<Boolean>() {
+	    	public void onFailure(Throwable caught) {
+	    		notifyListenersAttributeSyncFailed(object, caught);
+	    	}
+
+	    	public void onSuccess(Boolean success) {
+	    		notifyListenersAttributeSynced(object);
+	    	}
+	    };
+	    syncService.setAttributeValue(url, object.getType(), object.getId(), attr, callback);
 	}
 
 	/**
@@ -151,7 +204,13 @@ public class PageSyncManager {
 			it.next().contentLoaded(contentType);
 		}
 	}
-	
+
+	private void notifyListenersReadingOrderLoaded() {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().readingOrderLoaded();
+		}
+	}
+
 	//private void notifyListenersMetaDataLoaded() {
 	//	for (Iterator<PageLoadListener> it = listeners.iterator(); it.hasNext(); ) {
 	//		it.next().metaDataLoaded();
@@ -167,6 +226,12 @@ public class PageSyncManager {
 	private void notifyListenersContentLoadingFailed(String contentType, Throwable caught) {
 		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
 			it.next().contentLoadingFailed(contentType, caught);
+		}
+	}
+
+	private void notifyListenersReadingOrderLoadingFailed(Throwable caught) {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().readingOrderLoadingFailed(caught);
 		}
 	}
 
@@ -193,7 +258,13 @@ public class PageSyncManager {
 			it.next().textContentSyncFailed(object, caught);
 		}
 	}
-	
+
+	private void notifyListenersAttributeSyncFailed(ContentObjectC object, Throwable caught) {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().attributeSyncFailed(object, caught);
+		}
+	}
+
 	private void notifyListenersRegionTypeSyncFailed(ContentObjectC object, Throwable caught) {
 		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
 			it.next().regionTypeSyncFailed(object, caught);
@@ -236,6 +307,12 @@ public class PageSyncManager {
 		}
 	}
 
+	private void notifyListenersAttributeSynced(ContentObjectC obj) {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().attributeSynchronized(obj);
+		}
+	}
+
 	private void notifyListenersRegionTypeSynced(Pair<ContentObjectC,ArrayList<String>> resultData) {
 		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
 			ContentObjectC obj = resultData != null ? resultData.left : null;
@@ -262,6 +339,17 @@ public class PageSyncManager {
 		}
 	}
 
+	private void notifyListenersPageSizeReceived(Dimension pageSize) {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().pageSizeReceived(pageSize);
+		}
+	}
+	
+	private void notifyListenersGetPageSizeFailed(Throwable caught) {
+		for (Iterator<PageSyncListener> it = listeners.iterator(); it.hasNext(); ) {
+			it.next().getPageSizeFailed(caught);
+		}
+	}
 
 	/**
 	 * Resets this manager.
@@ -277,6 +365,10 @@ public class PageSyncManager {
 	 */
 	public void setUrl(String url) {
 		this.url = url;
+	}
+	
+	public String getUrl() {
+		return this.url;
 	}
 	
 	/**
@@ -408,6 +500,10 @@ public class PageSyncManager {
 		/** Called when loading the document page ID (ground truth and storage ID) has failed */
 		public void pageIdLoadingFailed(Throwable caught);
 		
+		/** Called when the page reading order has been loaded successfully */
+		public void readingOrderLoaded();
+		/** Called when loading the page reading order has failed */
+		public void readingOrderLoadingFailed(Throwable caught);
 		
 		/** Called when the page content object (e.g. a region) has been added successfully on server side */
 		public void contentObjectAdded(ContentObjectSync syncObj, ContentObjectC localObj);
@@ -423,6 +519,11 @@ public class PageSyncManager {
 		public void textContentSynchronized(ContentObjectC object);
 		/** Called when the text content could not be synchronised to the server */
 		public void textContentSyncFailed(ContentObjectC object, Throwable caught);
+
+		/** Called when an attribute has been sent successfully to the server */
+		public void attributeSynchronized(ContentObjectC object);
+		/** Called when the attribute could not be synchronised to the server */
+		public void attributeSyncFailed(ContentObjectC object, Throwable caught);
 
 		/** Called when the region type change has been applied successfully on server side */
 		public void regionTypeSynchronized(ContentObjectC object, ArrayList<String> childObjectsToDelete);
@@ -443,5 +544,10 @@ public class PageSyncManager {
 		public void changesReverted();
 		/** Called when the revert could not executed on server side */
 		public void revertChangesFailed(Throwable caught);
+
+		/** Called when the page size has been received from on server side */
+		public void pageSizeReceived(Dimension pageSize);
+		/** Called when the page size could not be loaded from the server */
+		public void getPageSizeFailed(Throwable caught);
 	}
 }
